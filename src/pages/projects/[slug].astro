@@ -1,0 +1,147 @@
+---
+import { getCollection, render } from "astro:content";
+import Layout from "@/layouts/Layout.astro";
+import Header from "@/components/Header.astro";
+import Footer from "@/components/Footer.astro";
+import StatusBadge from "@/components/StatusBadge.astro";
+import LogEntry from "@/components/LogEntry.astro";
+
+export async function getStaticPaths() {
+  const projects = await getCollection("projects");
+  return projects.map((project) => ({
+    params: { slug: project.id },
+    props: { project },
+  }));
+}
+
+const { project } = Astro.props;
+const { Content: ProjectBody } = await render(project);
+
+const allProjectLogs = await getCollection("projectLogs");
+const logsForProject = allProjectLogs
+  .filter((log) => log.data.project.id === project.id)
+  .sort((a, b) => new Date(b.data.date).getTime() - new Date(a.data.date).getTime());
+
+// Render all log entries
+const logsWithContent = await Promise.all(
+  logsForProject.map(async (log) => {
+    const { Content } = await render(log);
+    return { log, Content };
+  })
+);
+
+const startDateStr = new Date(project.data.startDate).toLocaleDateString("en-US", {
+  year: "numeric",
+  month: "short",
+  day: "numeric",
+});
+
+const endDateStr = project.data.endDate
+  ? new Date(project.data.endDate).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    })
+  : "Present";
+---
+
+<Layout title={`${project.data.title} | DevLog`} description={project.data.description}>
+  <Header />
+
+  <main id="main-content" class="app-layout py-8">
+    <!-- Back Link -->
+    <a
+      href="/projects"
+      class="inline-flex items-center text-xs font-mono text-skin-accent hover:underline mb-6"
+    >
+      ← Back to Projects
+    </a>
+
+    <!-- Project Header -->
+    <header class="border-b border-skin-line pb-6 mb-8">
+      <div class="flex items-center justify-between gap-4 flex-wrap mb-3">
+        <h1 class="text-3xl font-extrabold tracking-tight">
+          {project.data.title}
+        </h1>
+        <StatusBadge status={project.data.status} />
+      </div>
+
+      <p class="text-lg text-skin-base/80 mb-4">
+        {project.data.description}
+      </p>
+
+      <div class="flex flex-wrap items-center gap-4 text-xs font-mono text-skin-base/70 mb-4">
+        <span>Timeline: {startDateStr} — {endDateStr}</span>
+        {project.data.repoUrl && (
+          <a
+            href={project.data.repoUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="text-skin-accent hover:underline"
+          >
+            [Repository ↗]
+          </a>
+        )}
+        {project.data.demoUrl && (
+          <a
+            href={project.data.demoUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="text-skin-accent hover:underline"
+          >
+            [Live Demo ↗]
+          </a>
+        )}
+      </div>
+
+      {project.data.techStack.length > 0 && (
+        <div class="flex flex-wrap gap-1.5 mb-3">
+          <span class="text-xs font-mono text-foreground/60 self-center mr-1">Stack:</span>
+          {project.data.techStack.map((tech) => (
+            <span class="px-2 py-0.5 text-xs font-mono border border-border rounded bg-muted/60 text-foreground">{tech}</span>
+          ))}
+        </div>
+      )}
+
+    </header>
+
+    <!-- Rendered Project Overview Body -->
+    <section class="prose dark:prose-invert max-w-none mb-12 border-b border-skin-line pb-8">
+      <h2 class="text-xl font-bold tracking-tight mb-4">Project Overview</h2>
+      <ProjectBody />
+    </section>
+
+    <!-- Reverse Chronological Project Logs -->
+    <section>
+      <div class="flex items-center justify-between mb-6">
+        <h2 class="text-2xl font-bold tracking-tight">Project Logs</h2>
+        <span class="text-xs font-mono text-skin-base/60">
+          {logsForProject.length} {logsForProject.length === 1 ? "entry" : "entries"}
+        </span>
+      </div>
+
+      {logsWithContent.length > 0 ? (
+        <div class="space-y-6">
+          {logsWithContent.map(({ log, Content }) => {
+            const logSubSlug = log.id.includes("/") ? log.id.split("/").pop()! : log.id;
+            return (
+              <LogEntry
+                type="project"
+                log={log}
+                parentTitle={project.data.title}
+                parentSlug={project.id}
+                logSlug={logSubSlug}
+                Content={Content}
+                showParentLink={false}
+              />
+            );
+          })}
+        </div>
+      ) : (
+        <p class="text-skin-base/60 italic font-mono text-sm">No log entries recorded for this project yet.</p>
+      )}
+    </section>
+  </main>
+
+  <Footer />
+</Layout>

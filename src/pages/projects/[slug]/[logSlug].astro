@@ -1,0 +1,172 @@
+---
+import { getCollection, render } from "astro:content";
+import Layout from "@/layouts/Layout.astro";
+import Header from "@/components/Header.astro";
+import Footer from "@/components/Footer.astro";
+
+export async function getStaticPaths() {
+  const projects = await getCollection("projects");
+  const projectLogs = await getCollection("projectLogs");
+
+  return projectLogs.map((log) => {
+    const projectSlug = log.data.project.id;
+    const project = projects.find((p) => p.id === projectSlug);
+    const logSlug = log.id.includes("/") ? log.id.split("/").pop()! : log.id;
+
+    // Filter sibling logs under the same project and sort chronologically
+    const siblingLogs = projectLogs
+      .filter((l) => l.data.project.id === projectSlug)
+      .sort((a, b) => new Date(a.data.date).getTime() - new Date(b.data.date).getTime());
+
+    const currentIndex = siblingLogs.findIndex((l) => l.id === log.id);
+    const prevLog = currentIndex > 0 ? siblingLogs[currentIndex - 1] : null;
+    const nextLog = currentIndex < siblingLogs.length - 1 ? siblingLogs[currentIndex + 1] : null;
+
+    return {
+      params: { slug: projectSlug, logSlug },
+      props: { log, project, prevLog, nextLog, logSlug },
+    };
+  });
+}
+
+const { log, project, prevLog, nextLog } = Astro.props;
+const { Content, headings } = await render(log);
+
+const formattedDate = new Date(log.data.date).toLocaleDateString("en-US", {
+  weekday: "long",
+  year: "numeric",
+  month: "long",
+  day: "numeric",
+});
+
+const parentTitle = project ? project.data.title : log.data.project.id;
+const projectHref = `/projects/${log.data.project.id}`;
+
+function getLogUrl(targetLog: any) {
+  if (!targetLog) return "";
+  const subSlug = targetLog.id.includes("/") ? targetLog.id.split("/").pop()! : targetLog.id;
+  return `/projects/${targetLog.data.project.id}/${subSlug}`;
+}
+---
+
+<Layout
+  title={`${log.data.title} | ${parentTitle} | sucheeLogs`}
+  description={`Project log entry by Sucheendra for ${parentTitle}: ${log.data.title}`}
+>
+  <Header />
+
+  <!-- Sticky Dropdown Outline Bar -->
+  {headings && headings.length > 0 && (
+    <nav
+      aria-label="Article outline dropdown"
+      class="sticky top-0 z-30 bg-background border-b border-border py-2 px-4 shadow-sm"
+    >
+      <div class="app-layout flex items-center gap-3 flex-wrap">
+        <span class="text-xs font-mono text-foreground/70 font-medium">
+          Outline for this log:
+        </span>
+
+        <details class="group relative">
+          <summary class="inline-flex items-center justify-between gap-2 px-3 py-1.5 text-xs font-mono border border-border rounded bg-background hover:border-accent cursor-pointer transition-colors select-none">
+            <span class="flex items-center gap-1.5 text-accent font-bold uppercase tracking-wider">
+              <span>●</span> {headings.length} {headings.length === 1 ? "section" : "sections"}
+            </span>
+            <svg class="size-4 text-foreground/70 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="m6 9 6 6 6-6"/>
+            </svg>
+          </summary>
+
+          <div class="absolute left-0 mt-2 w-72 max-h-64 overflow-y-auto p-2 border border-border rounded bg-background shadow-2xl z-50">
+            <ul class="space-y-1 text-xs font-mono">
+              {headings.map((heading: any) => (
+                <li class={heading.depth > 2 ? "pl-3 text-foreground/70" : "font-semibold text-foreground"}>
+                  <a
+                    href={`#${heading.slug}`}
+                    class="block p-1.5 rounded hover:bg-muted hover:text-accent transition-colors truncate"
+                    onclick="this.closest('details').removeAttribute('open')"
+                  >
+                    {heading.text}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </details>
+      </div>
+    </nav>
+  )}
+
+  <main id="main-content" class="app-layout py-8">
+    <!-- Breadcrumb & Back Link -->
+    <div class="flex items-center gap-2 text-xs font-mono text-foreground/70 mb-6 flex-wrap">
+      <a href="/projects" class="hover:text-accent transition-colors">Projects</a>
+      <span>/</span>
+      <a href={projectHref} class="hover:text-accent transition-colors">{parentTitle}</a>
+      <span>/</span>
+      <span class="text-accent font-semibold">Log Entry</span>
+    </div>
+
+    <!-- Header -->
+    <header class="border-b border-border pb-6 mb-8">
+      <div class="flex items-center gap-2 mb-2 flex-wrap">
+        <span class="px-2 py-0.5 text-xs font-mono border rounded uppercase font-semibold tracking-wider bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30">
+          Project Log
+        </span>
+        <time datetime={new Date(log.data.date).toISOString()} class="text-xs font-mono text-foreground/60">
+          {formattedDate}
+        </time>
+      </div>
+
+      <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight mb-3 text-foreground">
+        {log.data.title}
+      </h1>
+
+      <p class="text-sm font-mono text-foreground/80 mb-4">
+        Project: <a href={projectHref} class="text-accent hover:underline font-semibold">{parentTitle}</a>
+      </p>
+
+    </header>
+
+    <!-- Detailed Markdown Body -->
+    <article class="prose dark:prose-invert max-w-none mb-12 border-b border-border pb-8">
+      <Content />
+    </article>
+
+    <!-- Previous / Next Log Entry Navigation -->
+    <nav aria-label="Log navigation" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {prevLog ? (
+        <a
+          href={getLogUrl(prevLog)}
+          class="p-4 border border-border rounded-lg bg-background hover:border-accent transition-all flex flex-col group"
+        >
+          <span class="text-xs font-mono text-foreground/60 uppercase tracking-wider mb-1">
+            ← Previous Entry
+          </span>
+          <span class="text-sm font-bold text-foreground group-hover:text-accent transition-colors line-clamp-1">
+            {prevLog.data.title}
+          </span>
+        </a>
+      ) : (
+        <div />
+      )}
+
+      {nextLog ? (
+        <a
+          href={getLogUrl(nextLog)}
+          class="p-4 border border-border rounded-lg bg-background hover:border-accent transition-all flex flex-col text-right sm:col-start-2 group"
+        >
+          <span class="text-xs font-mono text-foreground/60 uppercase tracking-wider mb-1">
+            Next Entry →
+          </span>
+          <span class="text-sm font-bold text-foreground group-hover:text-accent transition-colors line-clamp-1">
+            {nextLog.data.title}
+          </span>
+        </a>
+      ) : (
+        <div />
+      )}
+    </nav>
+  </main>
+
+  <Footer />
+</Layout>

@@ -1,0 +1,112 @@
+---
+import { getCollection } from "astro:content";
+import Layout from "@/layouts/Layout.astro";
+import Header from "@/components/Header.astro";
+import Footer from "@/components/Footer.astro";
+import ActivityFeed from "@/components/ActivityFeed.astro";
+
+const projects = await getCollection("projects");
+const projectLogs = await getCollection("projectLogs");
+const skills = await getCollection("skills");
+const skillLogs = await getCollection("skillLogs");
+
+// Compute stats
+const activeProjectsCount = projects.filter(
+  (p) => p.data.status === "active"
+).length;
+
+const skillsCount = skills.length;
+const totalLogsCount = projectLogs.length + skillLogs.length;
+
+// Derive overall last updated date
+const allLogDates = [
+  ...projectLogs.map((l) => new Date(l.data.date).getTime()),
+  ...skillLogs.map((l) => new Date(l.data.date).getTime()),
+];
+
+const lastUpdatedTimestamp = allLogDates.length > 0 ? Math.max(...allLogDates) : Date.now();
+const lastUpdatedDateStr = new Date(lastUpdatedTimestamp).toLocaleDateString("en-US", {
+  year: "numeric",
+  month: "short",
+  day: "numeric",
+});
+---
+
+<Layout title="sucheeLogs | Personal Project & Learning Journal" description="Personal dev journal, compiler engineering logs, and technical notes by Sucheendra.">
+  <Header />
+
+  <main id="main-content" class="app-layout py-8">
+    <!-- Intro Block -->
+    <section class="mb-10">
+      <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight mb-3 text-foreground">
+        sucheeLogs <span class="text-accent text-xl font-mono">// by Sucheendra</span>
+      </h1>
+      <p class="text-foreground/80 text-base sm:text-lg max-w-3xl leading-relaxed">
+        Hey, I'm <strong>Sucheendra</strong>. Welcome to <strong>sucheeLogs</strong> — my personal dev journal and engineering notebook.
+        Here I document my ongoing software builds, compiler internals research (MLIR / LLVM), systems programming, and technical breakthroughs.
+      </p>
+      <div class="flex items-center gap-3 mt-4 text-xs font-mono">
+        <a href="https://github.com/such3" target="_blank" rel="noopener noreferrer" class="text-accent hover:underline">
+          GitHub (@such3) ↗
+        </a>
+        <span>•</span>
+        <a href="https://www.linkedin.com/in/sucheendra" target="_blank" rel="noopener noreferrer" class="text-accent hover:underline">
+          LinkedIn ↗
+        </a>
+        <span>•</span>
+        <a href="mailto:sucheendra3@gmail.com" class="text-accent hover:underline">
+          sucheendra3@gmail.com
+        </a>
+      </div>
+    </section>
+
+    <!-- Stats Strip -->
+    <section class="grid grid-cols-2 sm:grid-cols-4 gap-4 p-5 mb-12 border border-border rounded-lg bg-background shadow-sm">
+      <div class="p-2 text-center sm:text-left border-r border-border/50 last:border-r-0">
+        <span class="block text-2xl sm:text-3xl font-extrabold font-mono text-accent">
+          {activeProjectsCount}
+        </span>
+        <span class="text-xs font-mono text-foreground/70 uppercase tracking-wider">Active Projects</span>
+      </div>
+
+      <div class="p-2 text-center sm:text-left border-r border-border/50 last:border-r-0">
+        <span class="block text-2xl sm:text-3xl font-extrabold font-mono text-accent">
+          {skillsCount}
+        </span>
+        <span class="text-xs font-mono text-foreground/70 uppercase tracking-wider">Skills Tracked</span>
+      </div>
+
+      <div class="p-2 text-center sm:text-left border-r border-border/50 last:border-r-0">
+        <span class="block text-2xl sm:text-3xl font-extrabold font-mono text-accent">
+          {totalLogsCount}
+        </span>
+        <span class="text-xs font-mono text-foreground/70 uppercase tracking-wider">Log Entries</span>
+      </div>
+
+      <div class="p-2 text-center sm:text-left">
+        <span class="block text-sm sm:text-base font-extrabold font-mono text-foreground pt-1">
+          {lastUpdatedDateStr}
+        </span>
+        <span class="text-xs font-mono text-foreground/70 uppercase tracking-wider">Last Updated</span>
+      </div>
+    </section>
+
+    <!-- Recent Activity Feed -->
+    <section class="mb-12">
+      <div class="flex items-center justify-between mb-6 pb-2 border-b border-border">
+        <h2 class="text-2xl font-bold tracking-tight text-foreground">Recent Activity</h2>
+        <a href="/projects" class="text-xs font-mono text-accent hover:underline">
+          View All Projects →
+        </a>
+      </div>
+
+      <ActivityFeed
+        projectLogs={projectLogs}
+        skillLogs={skillLogs}
+        limit={8}
+      />
+    </section>
+  </main>
+
+  <Footer />
+</Layout>

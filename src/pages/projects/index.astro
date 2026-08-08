@@ -1,0 +1,61 @@
+---
+import { getCollection } from "astro:content";
+import Layout from "@/layouts/Layout.astro";
+import Header from "@/components/Header.astro";
+import Footer from "@/components/Footer.astro";
+import ProjectCard from "@/components/ProjectCard.astro";
+
+const projects = await getCollection("projects");
+const projectLogs = await getCollection("projectLogs");
+
+// Compute log count and latest log date for each project
+const projectsWithStats = projects.map((project) => {
+  const logsForProject = projectLogs.filter(
+    (log) => log.data.project.id === project.id
+  );
+  
+  const logCount = logsForProject.length;
+  
+  let latestLogDate = project.data.startDate;
+  if (logsForProject.length > 0) {
+    const dates = logsForProject.map((log) => new Date(log.data.date).getTime());
+    latestLogDate = new Date(Math.max(...dates));
+  }
+
+  return {
+    project,
+    logCount,
+    latestLogDate,
+  };
+});
+
+// Sort projects descending by latestLogDate
+projectsWithStats.sort(
+  (a, b) => new Date(b.latestLogDate).getTime() - new Date(a.latestLogDate).getTime()
+);
+---
+
+<Layout title="Projects | sucheeLogs" description="All tracked software engineering projects and build logs.">
+  <Header />
+
+  <main id="main-content" class="app-layout py-8">
+    <div class="mb-8 border-b border-skin-line pb-6">
+      <h1 class="text-3xl font-extrabold tracking-tight mb-2">Projects</h1>
+      <p class="text-skin-base/80">
+        A complete log of software engineering projects, compiler passes, and architecture experiments.
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="projects-grid">
+      {projectsWithStats.map(({ project, logCount, latestLogDate }) => (
+        <ProjectCard
+          project={project}
+          logCount={logCount}
+          latestLogDate={latestLogDate}
+        />
+      ))}
+    </div>
+  </main>
+
+  <Footer />
+</Layout>

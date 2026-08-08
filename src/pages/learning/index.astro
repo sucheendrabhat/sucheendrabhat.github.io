@@ -1,0 +1,61 @@
+---
+import { getCollection } from "astro:content";
+import Layout from "@/layouts/Layout.astro";
+import Header from "@/components/Header.astro";
+import Footer from "@/components/Footer.astro";
+import SkillCard from "@/components/SkillCard.astro";
+
+const skills = await getCollection("skills");
+const skillLogs = await getCollection("skillLogs");
+
+// Compute log count and latest log date for each skill
+const skillsWithStats = skills.map((skill) => {
+  const logsForSkill = skillLogs.filter(
+    (log) => log.data.skill.id === skill.id
+  );
+
+  const logCount = logsForSkill.length;
+
+  let latestLogDate = skill.data.startDate;
+  if (logsForSkill.length > 0) {
+    const dates = logsForSkill.map((log) => new Date(log.data.date).getTime());
+    latestLogDate = new Date(Math.max(...dates));
+  }
+
+  return {
+    skill,
+    logCount,
+    latestLogDate,
+  };
+});
+
+// Sort skills descending by latestLogDate
+skillsWithStats.sort(
+  (a, b) => new Date(b.latestLogDate).getTime() - new Date(a.latestLogDate).getTime()
+);
+---
+
+<Layout title="Learning & Knowledge Log | sucheeLogs" description="Tracked technical skills, compiler internals, and ongoing study logs.">
+  <Header />
+
+  <main id="main-content" class="app-layout py-8">
+    <div class="mb-8 border-b border-border pb-6">
+      <h1 class="text-3xl font-extrabold tracking-tight mb-2 text-foreground">Learning & Knowledge Log</h1>
+      <p class="text-foreground/80">
+        A structured breakdown of core skills, compiler internals, systems programming, and technical topics being actively studied.
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="skills-grid">
+      {skillsWithStats.map(({ skill, logCount, latestLogDate }) => (
+        <SkillCard
+          skill={skill}
+          logCount={logCount}
+          latestLogDate={latestLogDate}
+        />
+      ))}
+    </div>
+  </main>
+
+  <Footer />
+</Layout>

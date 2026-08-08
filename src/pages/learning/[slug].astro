@@ -1,0 +1,112 @@
+---
+import { getCollection, render } from "astro:content";
+import Layout from "@/layouts/Layout.astro";
+import Header from "@/components/Header.astro";
+import Footer from "@/components/Footer.astro";
+import StatusBadge from "@/components/StatusBadge.astro";
+import LogEntry from "@/components/LogEntry.astro";
+
+export async function getStaticPaths() {
+  const skills = await getCollection("skills");
+  return skills.map((skill) => ({
+    params: { slug: skill.id },
+    props: { skill },
+  }));
+}
+
+const { skill } = Astro.props;
+const { Content: SkillBody } = await render(skill);
+
+const allSkillLogs = await getCollection("skillLogs");
+const logsForSkill = allSkillLogs
+  .filter((log) => log.data.skill.id === skill.id)
+  .sort((a, b) => new Date(b.data.date).getTime() - new Date(a.data.date).getTime());
+
+// Render all log entries
+const logsWithContent = await Promise.all(
+  logsForSkill.map(async (log) => {
+    const { Content } = await render(log);
+    return { log, Content };
+  })
+);
+
+const startDateStr = new Date(skill.data.startDate).toLocaleDateString("en-US", {
+  year: "numeric",
+  month: "short",
+  day: "numeric",
+});
+---
+
+<Layout title={`${skill.data.title} | sucheeLogs`} description={skill.data.description}>
+  <Header />
+
+  <main id="main-content" class="app-layout py-8">
+    <!-- Back Link -->
+    <a
+      href="/learning"
+      class="inline-flex items-center text-xs font-mono text-accent hover:underline mb-6"
+    >
+      ← Back to Learning Log
+    </a>
+
+    <!-- Skill Header -->
+    <header class="border-b border-border pb-6 mb-8">
+      <span class="text-xs font-mono uppercase tracking-wider text-accent block mb-1">
+        {skill.data.category}
+      </span>
+      <div class="flex items-center justify-between gap-4 flex-wrap mb-3">
+        <h1 class="text-3xl font-extrabold tracking-tight text-foreground">
+          {skill.data.title}
+        </h1>
+        <StatusBadge status={skill.data.status} />
+      </div>
+
+      <p class="text-lg text-foreground/80 mb-4">
+        {skill.data.description}
+      </p>
+
+      <div class="flex flex-wrap items-center gap-4 text-xs font-mono text-foreground/70 mb-4">
+        <span>Started: {startDateStr}</span>
+      </div>
+    </header>
+
+    <!-- Rendered Skill Overview Body -->
+    <section class="prose dark:prose-invert max-w-none mb-12 border-b border-border pb-8">
+      <h2 class="text-xl font-bold tracking-tight mb-4 text-foreground">Topic Overview & Objectives</h2>
+      <SkillBody />
+    </section>
+
+    <!-- Reverse Chronological Skill Logs -->
+    <section>
+      <div class="flex items-center justify-between mb-6">
+        <h2 class="text-2xl font-bold tracking-tight text-foreground">Learning Logs</h2>
+        <span class="text-xs font-mono text-foreground/60">
+          {logsForSkill.length} {logsForSkill.length === 1 ? "entry" : "entries"}
+        </span>
+      </div>
+
+      {logsWithContent.length > 0 ? (
+        <div class="space-y-6">
+          {logsWithContent.map(({ log, Content }) => {
+            const logSubSlug = log.id.includes("/") ? log.id.split("/").pop()! : log.id;
+            return (
+              <LogEntry
+                type="skill"
+                log={log}
+                parentTitle={skill.data.title}
+                parentSlug={skill.id}
+                logSlug={logSubSlug}
+                Content={Content}
+                showParentLink={false}
+              />
+            );
+          })}
+        </div>
+      ) : (
+        <p class="text-foreground/60 italic font-mono text-sm">No study logs recorded for this topic yet.</p>
+      )}
+    </section>
+  </main>
+
+  <Footer />
+</Layout>

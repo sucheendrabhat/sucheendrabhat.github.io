@@ -1,0 +1,28 @@
+---
+import Layout from "@/layouts/Layout.astro";
+import Header from "@/components/Header.astro";
+import Footer from "@/components/Footer.astro";
+import config from "@/config";
+---
+
+<Layout
+  title={`About | ${config.site.title}`}
+  description="About this personal developer log and knowledge base."
+>
+  <Header />
+
+  <main id="main-content" class="app-layout py-8">
+    <h1 class="text-3xl font-extrabold tracking-tight mb-4 text-foreground">About sucheeLogs</h1>
+    <div class="prose dark:prose-invert max-w-none space-y-4 text-foreground/90">
+      <p>
+        <strong>sucheeLogs</strong> is a content-first working notebook by <strong>Sucheendra</strong> designed to capture technical engineering milestones,
+        compiler internals study notes, and system architecture progress.
+      </p>
+      <p>
+        Built with <strong>Astro 6</strong>, <strong>TypeScript</strong>, <strong>Tailwind CSS</strong>, and <strong>Pagefind</strong> search.
+      </p>
+    </div>
+  </main>
+
+  <Footer />
+</Layout>

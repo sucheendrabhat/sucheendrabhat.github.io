@@ -1,0 +1,83 @@
+---
+import { getEntry } from "astro:content";
+import LogEntry from "./LogEntry.astro";
+
+export interface Props {
+  projectLogs: any[];
+  skillLogs: any[];
+  limit?: number;
+}
+
+const { projectLogs, skillLogs, limit = 8 } = Astro.props;
+
+// Standardize and merge entries
+const taggedProjectLogs = projectLogs.map((log) => ({
+  type: "project" as const,
+  log,
+  date: new Date(log.data.date).getTime(),
+}));
+
+const taggedSkillLogs = skillLogs.map((log) => ({
+  type: "skill" as const,
+  log,
+  date: new Date(log.data.date).getTime(),
+}));
+
+const merged = [...taggedProjectLogs, ...taggedSkillLogs]
+  .sort((a, b) => b.date - a.date)
+  .slice(0, limit);
+
+// Resolve parent entries for each item
+const itemsWithParents = await Promise.all(
+  merged.map(async (item) => {
+    let parentTitle = "Unknown";
+    let parentSlug = "";
+
+    if (item.type === "project") {
+      const parent = await getEntry(item.log.data.project);
+      if (parent) {
+        parentTitle = parent.data.title;
+        parentSlug = parent.id;
+      }
+    } else {
+      const parent = await getEntry(item.log.data.skill);
+      if (parent) {
+        parentTitle = parent.data.title;
+        parentSlug = parent.id;
+      }
+    }
+
+    // Extract first non-empty paragraph or body snippet as excerpt
+    const excerpt = item.log.body
+      ? item.log.body
+          .split("\n")
+          .map((line: string) => line.trim())
+          .filter((line: string) => line.length > 0 && !line.startsWith("#") && !line.startsWith("---"))[0] || ""
+      : "";
+
+    return {
+      ...item,
+      parentTitle,
+      parentSlug,
+      excerpt,
+    };
+  })
+);
+---
+
+<div class="activity-feed space-y-4">
+  {itemsWithParents.length > 0 ? (
+    itemsWithParents.map((item) => (
+      <LogEntry
+        type={item.type}
+        log={item.log}
+        parentTitle={item.parentTitle}
+        parentSlug={item.parentSlug}
+        excerpt={item.excerpt}
+        showParentLink={true}
+      />
+    ))
+  ) : (
+    <p class="text-skin-base/60 italic font-mono text-sm">No activity recorded yet.</p>
+  )}
+</div>

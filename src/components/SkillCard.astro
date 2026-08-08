@@ -1,0 +1,62 @@
+---
+import StatusBadge from "./StatusBadge.astro";
+
+export interface Props {
+  skill: {
+    id: string;
+    data: {
+      title: string;
+      category: string;
+      description: string;
+      status: string;
+      startDate: Date;
+      tags: string[];
+    };
+  };
+  logCount: number;
+  latestLogDate: Date;
+}
+
+const { skill, logCount, latestLogDate } = Astro.props;
+const formattedLatestDate = new Date(latestLogDate).toLocaleDateString("en-US", {
+  year: "numeric",
+  month: "short",
+  day: "numeric",
+});
+---
+
+<article
+  class="skill-card border border-border rounded-lg p-5 hover:border-accent transition-all bg-background shadow-sm flex flex-col justify-between"
+  data-status={skill.data.status}
+  data-category={skill.data.category}
+>
+  <div>
+    <div class="flex items-start justify-between gap-2 mb-2 flex-wrap">
+      <div>
+        <span class="text-xs font-mono uppercase tracking-wider text-accent block mb-1">
+          {skill.data.category}
+        </span>
+        <h3 class="text-xl font-bold tracking-tight">
+          <a
+            href={`/learning/${skill.id}`}
+            class="hover:text-accent transition-colors underline-offset-4 hover:underline text-foreground"
+          >
+            {skill.data.title}
+          </a>
+        </h3>
+      </div>
+      <StatusBadge status={skill.data.status} />
+    </div>
+
+    <p class="text-foreground/80 text-sm mb-4 line-clamp-2">
+      {skill.data.description}
+    </p>
+  </div>
+
+  <div>
+    <div class="flex items-center justify-between text-xs font-mono text-foreground/60 pt-3 border-t border-border">
+      <span>{logCount} {logCount === 1 ? "log entry" : "log entries"}</span>
+      <span>Updated: {formattedLatestDate}</span>
+    </div>
+  </div>
+</article>
