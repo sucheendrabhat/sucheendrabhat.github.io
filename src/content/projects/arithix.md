@@ -5,7 +5,7 @@ status: "active"
 startDate: 2026-08-10
 tags: ["compilers", "mlir", "llvm", "math-engine", "jit"]
 techStack: ["MLIR", "LLVM", "C++", "CMake"]
-repoUrl: "https://github.com/aithix"
+repoUrl: "https://github.com/arithix"
 featured: true
 ---
 

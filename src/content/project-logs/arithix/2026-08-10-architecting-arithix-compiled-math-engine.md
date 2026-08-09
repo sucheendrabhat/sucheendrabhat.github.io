@@ -55,4 +55,4 @@ Starting today, development is focused on setting up the MLIR build environment 
 
 Stay tuned for upcoming progress entries as the MLIR dialect definitions and lowering passes take shape!
 
-- Repository: [github.com/aithix](https://github.com/aithix)
+- Repository: [github.com/arithix](https://github.com/arithix)
